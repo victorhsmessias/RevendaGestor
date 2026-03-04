@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==================== TENANT ====================
+
+enum PlanStatus {
+  TRIAL
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+model Tenant {
+  id                    String     @id @default(uuid())
+  name                  String
+  planStatus            PlanStatus @default(TRIAL)
+  trialEndsAt           DateTime?
+  asaasCustomerId       String?    @unique
+  asaasSubscriptionId   String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  users        User[]
+  clientes     Cliente[]
+  fornecedores Fornecedor[]
+  produtos     Produto[]
+  vendas       Venda[]
+  parcelas     Parcela[]
+  contasPagar  ContaPagar[]
+}
+
+// ==================== AUTH ====================
+
+enum UserRole {
+  OWNER
+  ADMIN
+  USER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@index([tenantId])
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ==================== CLIENTES ====================
+
+model Cliente {
+  id        String    @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String?
+  phone     String?
+  cpf       String?
+  city      String?
+  address   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  vendas Venda[]
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, name])
+}
+
+// ==================== FORNECEDORES ====================
+
+model Fornecedor {
+  id        String    @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String?
+  phone     String?
+  cnpj      String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  produtos Produto[]
+  contasPagar ContaPagar[]
+
+  @@index([tenantId, deletedAt])
+}
+
+// ==================== PRODUTOS ====================
+
+model Produto {
+  id           String    @id @default(uuid())
+  tenantId     String
+  fornecedorId String
+  code         String
+  name         String
+  costPrice    Float
+  salePrice    Float
+  quantity     Int       @default(0)
+  minStock     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  fornecedor Fornecedor  @relation(fields: [fornecedorId], references: [id])
+  vendaItems VendaItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, deletedAt])
+}
+
+// ==================== VENDAS ====================
+
+enum VendaStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum FormaPagamento {
+  DINHEIRO
+  PIX
+  CARTAO
+  BOLETO
+  FIADO
+}
+
+model Venda {
+  id              String         @id @default(uuid())
+  tenantId        String
+  clienteId       String
+  subtotal        Float
+  discount        Float          @default(0)
+  total           Float
+  formaPagamento  FormaPagamento
+  status          VendaStatus    @default(PENDING)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  tenant   Tenant     @relation(fields: [tenantId], references: [id])
+  cliente  Cliente    @relation(fields: [clienteId], references: [id])
+  items    VendaItem[]
+  parcelas Parcela[]
+
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, clienteId])
+  @@index([tenantId, status])
+}
+
+model VendaItem {
+  id        String @id @default(uuid())
+  vendaId   String
+  produtoId String
+  quantity  Int
+  unitPrice Float
+  total     Float
+
+  venda   Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@index([vendaId])
+}
+
+// ==================== PARCELAS ====================
+
+enum ParcelaStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+model Parcela {
+  id             String        @id @default(uuid())
+  tenantId       String
+  vendaId        String
+  numero         Int
+  valor          Float
+  dataVencimento DateTime
+  dataPagamento  DateTime?
+  status         ParcelaStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  venda  Venda  @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([vendaId])
+  @@index([tenantId, dataVencimento])
+}
+
+// ==================== CONTAS A PAGAR ====================
+
+enum ContaPagarStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model ContaPagar {
+  id             String          @id @default(uuid())
+  tenantId       String
+  fornecedorId   String?
+  description    String
+  valor          Float
+  dataVencimento DateTime
+  dataPagamento  DateTime?
+  status         ContaPagarStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, dataVencimento])
+}

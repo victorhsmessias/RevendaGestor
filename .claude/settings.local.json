@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install fastify @fastify/jwt @fastify/cors @fastify/cookie @fastify/rate-limit zod bcrypt @prisma/client pino-pretty)",
+      "Bash(npm install -D typescript tsx @types/node @types/bcrypt prisma)"
+    ]
+  }
+}
