@@ -1,7 +1,7 @@
 {
-  "name": "meu-revendedor-backend",
+  "name": "revendagestor-backend",
   "version": "1.0.0",
-  "description": "Meu Revendedor API - SaaS para revendedoras",
+  "description": "RevendaGestor API - SaaS para revendedoras",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

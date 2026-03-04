@@ -31,7 +31,7 @@ export default function RegisterPage() {
     try {
       const result = await api.post<AuthResponse>('/auth/register', data)
       login(result.accessToken, result.user, result.tenant)
-      toast.success('Conta criada com sucesso! Bem-vindo ao Meu Revendedor!')
+      toast.success('Conta criada com sucesso! Bem-vindo ao RevendaGestor!')
       router.push('/')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao criar conta'

@@ -105,7 +105,7 @@ export function Header() {
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex items-center h-14 px-6 border-b">
             <ShoppingCart className="h-6 w-6 text-primary" />
-            <SheetTitle className="text-xl font-bold ml-2">Meu Revendedor</SheetTitle>
+            <SheetTitle className="text-xl font-bold ml-2">RevendaGestor</SheetTitle>
           </div>
           <nav className="px-3 py-4 space-y-1">
             {menuItems.map((item) => {

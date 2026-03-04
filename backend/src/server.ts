@@ -171,7 +171,7 @@ async function bootstrap() {
 
   try {
     await app.listen({ port, host })
-    app.log.info(`Meu Revendedor API rodando em http://localhost:${port}`)
+    app.log.info(`RevendaGestor API rodando em http://localhost:${port}`)
   } catch (err) {
     app.log.error(err)
     process.exit(1)

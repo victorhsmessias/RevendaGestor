@@ -34,7 +34,7 @@ export function Sidebar() {
       <div className="flex items-center h-16 px-6 border-b">
         <Link href="/" className="flex items-center gap-2">
           <ShoppingCart className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">Meu Revendedor</span>
+          <span className="text-xl font-bold">RevendaGestor</span>
         </Link>
       </div>
 

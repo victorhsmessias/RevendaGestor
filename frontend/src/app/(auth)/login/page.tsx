@@ -47,7 +47,7 @@ export default function LoginPage() {
         <div className="flex justify-center mb-2">
           <ShoppingCart className="h-10 w-10 text-primary" />
         </div>
-        <CardTitle className="text-2xl">Meu Revendedor</CardTitle>
+        <CardTitle className="text-2xl">RevendaGestor</CardTitle>
         <CardDescription>Entre na sua conta para continuar</CardDescription>
       </CardHeader>
       <form onSubmit={form.handleSubmit(onSubmit)}>

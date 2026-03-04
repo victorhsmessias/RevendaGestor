@@ -14,14 +14,14 @@ export function ValuesVisibilityProvider({ children }: { children: React.ReactNo
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem('meu-revendedor-values-visible')
+    const saved = localStorage.getItem('revendagestor-values-visible')
     if (saved === 'false') setVisible(false)
   }, [])
 
   const toggle = useCallback(() => {
     setVisible(prev => {
       const next = !prev
-      localStorage.setItem('meu-revendedor-values-visible', String(next))
+      localStorage.setItem('revendagestor-values-visible', String(next))
       return next
     })
   }, [])

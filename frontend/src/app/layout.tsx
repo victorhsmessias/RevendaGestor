@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Meu Revendedor - Gestão de Vendas",
+  title: "RevendaGestor - Gestão de Vendas",
   description: "Sistema completo de gestão de vendas para revendedoras",
 }
 

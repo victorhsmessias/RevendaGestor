@@ -70,7 +70,7 @@ export const asaas = {
       value: 34.90,
       nextDueDate: dueDateStr,
       cycle: 'MONTHLY',
-      description: 'Meu Revendedor - Assinatura Mensal',
+      description: 'RevendaGestor - Assinatura Mensal',
     })
   },
 

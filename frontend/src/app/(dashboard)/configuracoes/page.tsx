@@ -335,7 +335,7 @@ function AssinaturaTab() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800">
                 Seu periodo de teste expira em <strong>{formatDate(data.trialEndsAt)}</strong>.
-                Assine para continuar usando o Meu Revendedor.
+                Assine para continuar usando o RevendaGestor.
               </p>
             </div>
           )}
@@ -380,13 +380,13 @@ function AssinaturaTab() {
       {(data?.planStatus === 'TRIAL' || data?.planStatus === 'CANCELLED') && (
         <Card>
           <CardHeader>
-            <CardTitle>Assinar Meu Revendedor</CardTitle>
+            <CardTitle>Assinar RevendaGestor</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-lg font-bold">R$ 34,90 <span className="text-sm font-normal text-muted-foreground">/ mes</span></p>
               <p className="text-sm text-muted-foreground mt-1">
-                Acesso completo a todas as funcionalidades do Meu Revendedor
+                Acesso completo a todas as funcionalidades do RevendaGestor
               </p>
             </div>
 
