@@ -22,6 +22,14 @@ export interface Parcela {
   status: 'PENDING' | 'PAID' | 'OVERDUE'
 }
 
+export interface Pagamento {
+  id: string
+  valor: number
+  formaPagamento: string
+  notes: string | null
+  createdAt: string
+}
+
 export interface Venda {
   id: string
   clienteId: string
@@ -35,6 +43,9 @@ export interface Venda {
   cliente: { id: string; name: string; phone?: string }
   items?: VendaItem[]
   parcelas?: Parcela[]
+  pagamentos?: Pagamento[]
+  valorPago?: number
+  saldoDevedor?: number
   _count?: { items: number; parcelas: number }
 }
 
@@ -121,6 +132,26 @@ export function usePagarParcela() {
   return useMutation({
     mutationFn: ({ vendaId, parcelaId }: { vendaId: string; parcelaId: string }) =>
       api.patch(`/vendas/${vendaId}/parcelas/${parcelaId}/pagar`, {}),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['vendas'] }),
+        qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] }),
+      ])
+    },
+  })
+}
+
+export interface RegistrarPagamentoInput {
+  valor: number
+  formaPagamento: string
+  notes?: string
+}
+
+export function useRegistrarPagamento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ vendaId, data }: { vendaId: string; data: RegistrarPagamentoInput }) =>
+      api.post(`/vendas/${vendaId}/pagamentos`, data),
     onSuccess: async () => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['vendas'] }),

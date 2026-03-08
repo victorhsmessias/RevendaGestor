@@ -5,7 +5,7 @@ import {
   useVendasPorCliente,
   useVenda,
   useCancelarVenda,
-  usePagarParcela,
+  useRegistrarPagamento,
   type ClienteVendas,
   type ClienteVendaItem,
 } from '@/hooks/useVendas'
@@ -21,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { useValuesVisibility } from '@/providers/ValuesVisibilityProvider'
-import { Plus, Search, Eye, XCircle, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Search, Eye, XCircle, ChevronDown, ChevronRight, DollarSign } from 'lucide-react'
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
@@ -47,8 +47,6 @@ export default function VendasPage() {
 
   const { data, isLoading, error } = useVendasPorCliente(page, search)
   const cancelMutation = useCancelarVenda()
-  const pagarParcelaMutation = usePagarParcela()
-
   const handleCancel = (id: string) => {
     if (!confirm('Tem certeza que deseja cancelar esta venda? O estoque sera devolvido.')) return
     toast.promise(cancelMutation.mutateAsync(id), {
@@ -56,15 +54,6 @@ export default function VendasPage() {
       success: () => { setDetailId(null); return 'Venda cancelada' },
       error: (err) => err instanceof Error ? err.message : 'Erro ao cancelar',
     })
-  }
-
-  const handlePagarParcela = async (vendaId: string, parcelaId: string) => {
-    try {
-      await pagarParcelaMutation.mutateAsync({ vendaId, parcelaId })
-      toast.success('Parcela marcada como paga')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao pagar parcela')
-    }
   }
 
   const { mask } = useValuesVisibility()
@@ -241,7 +230,6 @@ export default function VendasPage() {
           vendaId={detailId}
           onClose={() => setDetailId(null)}
           onCancel={handleCancel}
-          onPagarParcela={handlePagarParcela}
           formatCurrency={fmt}
           formatDate={formatDate}
         />
@@ -402,18 +390,42 @@ function VendaDetailDialog({
   vendaId,
   onClose,
   onCancel,
-  onPagarParcela,
   formatCurrency,
   formatDate,
 }: {
   vendaId: string
   onClose: () => void
   onCancel: (id: string) => void
-  onPagarParcela: (vendaId: string, parcelaId: string) => void
   formatCurrency: (v: number) => string
   formatDate: (d: string) => string
 }) {
   const { data: venda, isLoading } = useVenda(vendaId)
+  const registrarPagamento = useRegistrarPagamento()
+  const [showPagamentoForm, setShowPagamentoForm] = useState(false)
+  const [pgValor, setPgValor] = useState('')
+  const [pgForma, setPgForma] = useState('PIX')
+  const [pgNotes, setPgNotes] = useState('')
+
+  const handleRegistrarPagamento = async () => {
+    const valor = parseFloat(pgValor.replace(',', '.'))
+    if (!valor || valor <= 0) {
+      toast.error('Informe um valor valido')
+      return
+    }
+    try {
+      const result = await registrarPagamento.mutateAsync({
+        vendaId,
+        data: { valor, formaPagamento: pgForma, notes: pgNotes || undefined },
+      })
+      const msg = (result as { message?: string })?.message || 'Pagamento registrado'
+      toast.success(msg)
+      setPgValor('')
+      setPgNotes('')
+      setShowPagamentoForm(false)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao registrar pagamento')
+    }
+  }
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -454,7 +466,6 @@ function VendaDetailDialog({
             {venda.items && venda.items.length > 0 && (
               <div>
                 <h3 className="font-medium mb-2">Itens</h3>
-                {/* Mobile items */}
                 <div className="space-y-2 md:hidden">
                   {venda.items.map(item => (
                     <div key={item.id} className="border rounded-lg p-2.5 text-sm">
@@ -466,7 +477,6 @@ function VendaDetailDialog({
                     </div>
                   ))}
                 </div>
-                {/* Desktop items table */}
                 <div className="border rounded-lg overflow-hidden hidden md:block">
                   <table className="w-full text-sm">
                     <thead>
@@ -492,50 +502,110 @@ function VendaDetailDialog({
               </div>
             )}
 
-            {/* Totais */}
+            {/* Totais + Saldo */}
             <div className="bg-muted/50 rounded-lg p-3 md:p-4 space-y-1 text-sm">
               <div className="flex justify-between"><span>Subtotal:</span><span>{formatCurrency(venda.subtotal)}</span></div>
               {venda.discount > 0 && (
                 <div className="flex justify-between text-destructive"><span>Desconto:</span><span>-{formatCurrency(venda.discount)}</span></div>
               )}
-              <div className="flex justify-between font-bold text-base md:text-lg border-t pt-2 mt-2">
+              <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                 <span>Total:</span><span>{formatCurrency(venda.total)}</span>
               </div>
+              {venda.valorPago !== undefined && (
+                <>
+                  <div className="flex justify-between text-green-600">
+                    <span>Pago:</span><span>{formatCurrency(venda.valorPago)}</span>
+                  </div>
+                  {(venda.saldoDevedor ?? 0) > 0 && (
+                    <div className="flex justify-between font-bold text-amber-600 text-base">
+                      <span>Saldo devedor:</span><span>{formatCurrency(venda.saldoDevedor!)}</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* Parcelas */}
-            {venda.parcelas && venda.parcelas.length > 0 && (
+            {/* Historico de Pagamentos */}
+            {venda.pagamentos && venda.pagamentos.length > 0 && (
               <div>
-                <h3 className="font-medium mb-2">Parcelas</h3>
+                <h3 className="font-medium mb-2">Historico de Pagamentos</h3>
                 <div className="space-y-2">
-                  {venda.parcelas.map(p => (
-                    <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between border rounded-lg p-2.5 sm:p-3 text-sm gap-2">
+                  {venda.pagamentos.map(pg => (
+                    <div key={pg.id} className="flex items-center justify-between border rounded-lg p-2.5 text-sm">
                       <div>
-                        <span className="font-medium">Parcela {p.numero}</span>
-                        <span className="text-muted-foreground ml-2 text-xs sm:text-sm">
-                          Venc: {formatDate(p.dataVencimento)}
+                        <span className="text-muted-foreground">{formatDate(pg.createdAt)}</span>
+                        <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded">
+                          {formaLabels[pg.formaPagamento] || pg.formaPagamento}
                         </span>
+                        {pg.notes && <span className="ml-2 text-xs text-muted-foreground">{pg.notes}</span>}
                       </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-3">
-                        <span className="font-medium">{formatCurrency(p.valor)}</span>
-                        {p.status === 'PAID' ? (
-                          <span className="inline-flex items-center gap-1 text-green-600 text-xs">
-                            <CheckCircle className="h-3 w-3" /> Pago
-                          </span>
-                        ) : venda.status !== 'CANCELLED' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onPagarParcela(venda.id, p.id)}
-                            className="text-xs h-7"
-                          >
-                            Pagar
-                          </Button>
-                        ) : null}
-                      </div>
+                      <span className="font-medium text-green-600">+{formatCurrency(pg.valor)}</span>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Registrar Pagamento */}
+            {venda.status !== 'CANCELLED' && venda.status !== 'PAID' && (
+              <div>
+                {!showPagamentoForm ? (
+                  <Button
+                    onClick={() => setShowPagamentoForm(true)}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Registrar Pagamento
+                  </Button>
+                ) : (
+                  <div className="border rounded-lg p-3 space-y-3">
+                    <h3 className="font-medium">Registrar Pagamento</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm text-muted-foreground">Valor (R$)</label>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={`Max: ${(venda.saldoDevedor ?? venda.total).toFixed(2)}`}
+                          value={pgValor}
+                          onChange={(e) => setPgValor(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Forma</label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={pgForma}
+                          onChange={(e) => setPgForma(e.target.value)}
+                        >
+                          <option value="PIX">PIX</option>
+                          <option value="DINHEIRO">Dinheiro</option>
+                          <option value="CARTAO">Cartao</option>
+                          <option value="BOLETO">Boleto</option>
+                        </select>
+                      </div>
+                    </div>
+                    <Input
+                      placeholder="Observacao (opcional)"
+                      value={pgNotes}
+                      onChange={(e) => setPgNotes(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRegistrarPagamento}
+                        disabled={registrarPagamento.isPending}
+                        className="flex-1"
+                      >
+                        {registrarPagamento.isPending ? 'Registrando...' : 'Confirmar'}
+                      </Button>
+                      <Button variant="outline" onClick={() => setShowPagamentoForm(false)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
