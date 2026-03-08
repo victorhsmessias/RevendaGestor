@@ -1,6 +1,13 @@
 import { FastifyInstance } from 'fastify'
+import { z } from 'zod'
 import { prisma } from '../lib/prisma'
 import { createVendaSchema, paginationSchema, type CreateVenda } from '../lib/validators'
+
+const registrarPagamentoSchema = z.object({
+  valor: z.number().positive('Valor deve ser maior que zero'),
+  formaPagamento: z.enum(['DINHEIRO', 'PIX', 'CARTAO', 'BOLETO', 'FIADO']),
+  notes: z.string().optional(),
+})
 
 export async function vendaRoutes(fastify: FastifyInstance) {
 
@@ -264,11 +271,17 @@ export async function vendaRoutes(fastify: FastifyInstance) {
           include: { produto: { select: { id: true, name: true, code: true } } },
         },
         parcelas: { orderBy: { numero: 'asc' } },
+        pagamentos: { orderBy: { createdAt: 'asc' } },
       },
     })
 
     if (!venda) return reply.code(404).send({ error: 'Venda nao encontrada' })
-    return venda
+
+    // Calcular valor pago e saldo devedor
+    const valorPago = venda.pagamentos.reduce((sum, p) => sum + p.valor, 0)
+    const saldoDevedor = Math.max(0, Math.round((venda.total - valorPago) * 100) / 100)
+
+    return { ...venda, valorPago, saldoDevedor }
   })
 
   // PATCH /api/vendas/:id/parcelas/:parcelaId/pagar — Marcar parcela como paga
@@ -308,6 +321,60 @@ export async function vendaRoutes(fastify: FastifyInstance) {
       return { message: 'Parcela marcada como paga' }
     }
   )
+
+  // POST /api/vendas/:id/pagamentos — Registrar pagamento parcial
+  fastify.post<{ Params: { id: string } }>('/vendas/:id/pagamentos', async (request, reply) => {
+    const data = registrarPagamentoSchema.parse(request.body)
+
+    const venda = await prisma.venda.findFirst({
+      where: { id: request.params.id, tenantId: request.tenantId, deletedAt: null },
+      include: { pagamentos: true },
+    })
+    if (!venda) return reply.code(404).send({ error: 'Venda nao encontrada' })
+    if (venda.status === 'CANCELLED') return reply.code(400).send({ error: 'Venda cancelada' })
+    if (venda.status === 'PAID') return reply.code(400).send({ error: 'Venda ja esta totalmente paga' })
+
+    const totalPago = venda.pagamentos.reduce((sum, p) => sum + p.valor, 0)
+    const saldoAtual = Math.round((venda.total - totalPago) * 100) / 100
+
+    if (data.valor > saldoAtual + 0.01) {
+      return reply.code(400).send({ error: `Valor excede o saldo devedor de R$ ${saldoAtual.toFixed(2)}` })
+    }
+
+    const novoTotalPago = Math.round((totalPago + data.valor) * 100) / 100
+    const quitou = novoTotalPago >= venda.total - 0.01
+
+    await prisma.$transaction(async (tx) => {
+      await tx.pagamento.create({
+        data: {
+          tenantId: request.tenantId,
+          vendaId: venda.id,
+          valor: data.valor,
+          formaPagamento: data.formaPagamento,
+          notes: data.notes,
+        },
+      })
+
+      await tx.venda.update({
+        where: { id: venda.id },
+        data: { status: quitou ? 'PAID' : 'PARTIAL' },
+      })
+
+      // Se quitou, marcar parcelas pendentes como pagas
+      if (quitou) {
+        await tx.parcela.updateMany({
+          where: { vendaId: venda.id, status: 'PENDING' },
+          data: { status: 'PAID', dataPagamento: new Date() },
+        })
+      }
+    })
+
+    return reply.code(201).send({
+      message: quitou ? 'Pagamento registrado - venda quitada!' : 'Pagamento registrado',
+      valorPago: novoTotalPago,
+      saldoDevedor: quitou ? 0 : Math.round((venda.total - novoTotalPago) * 100) / 100,
+    })
+  })
 
   // DELETE /api/vendas/:id — Cancelar venda (soft delete + devolver estoque)
   fastify.delete<{ Params: { id: string } }>('/vendas/:id', async (request, reply) => {

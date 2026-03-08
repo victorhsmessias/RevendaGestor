@@ -33,6 +33,7 @@ model Tenant {
   produtos     Produto[]
   vendas       Venda[]
   parcelas     Parcela[]
+  pagamentos   Pagamento[]
   contasPagar  ContaPagar[]
 }
 
@@ -187,10 +188,11 @@ model Venda {
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
 
-  tenant   Tenant     @relation(fields: [tenantId], references: [id])
-  cliente  Cliente    @relation(fields: [clienteId], references: [id])
-  items    VendaItem[]
-  parcelas Parcela[]
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  cliente    Cliente     @relation(fields: [clienteId], references: [id])
+  items      VendaItem[]
+  parcelas   Parcela[]
+  pagamentos Pagamento[]
 
   @@index([tenantId, deletedAt])
   @@index([tenantId, clienteId])
@@ -237,6 +239,24 @@ model Parcela {
   @@index([tenantId, status])
   @@index([vendaId])
   @@index([tenantId, dataVencimento])
+}
+
+// ==================== PAGAMENTOS (abatimentos parciais) ====================
+
+model Pagamento {
+  id              String         @id @default(uuid())
+  tenantId        String
+  vendaId         String
+  valor           Float
+  formaPagamento  FormaPagamento
+  notes           String?
+  createdAt       DateTime       @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  venda  Venda  @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  @@index([vendaId])
+  @@index([tenantId])
 }
 
 // ==================== CONTAS A PAGAR ====================
