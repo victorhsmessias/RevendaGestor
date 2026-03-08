@@ -53,7 +53,7 @@ export interface AsaasCreditCardHolderInfo {
 }
 
 async function asaasRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     access_token: ASAAS_API_KEY,
   }
@@ -65,12 +65,12 @@ async function asaasRequest<T>(method: string, path: string, body?: unknown): Pr
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ errors: [{ description: 'Erro na API Asaas' }] }))
+    const error = await response.json().catch(() => ({ errors: [{ description: 'Erro na API Asaas' }] })) as { errors?: { description?: string }[] }
     const message = error.errors?.[0]?.description || `Erro Asaas: ${response.status}`
     throw new Error(message)
   }
 
-  return response.json()
+  return response.json() as Promise<T>
 }
 
 export const asaas = {
