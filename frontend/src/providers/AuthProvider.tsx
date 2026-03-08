@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { User, Tenant, MeResponse } from '@/types'
 
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<Tenant | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const refreshUser = useCallback(async () => {
     try {
@@ -73,8 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     api.clearToken()
     setUser(null)
     setTenant(null)
+    queryClient.clear()
     router.push('/login')
-  }, [router])
+  }, [router, queryClient])
 
   return (
     <AuthContext.Provider
