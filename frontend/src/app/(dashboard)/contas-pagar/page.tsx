@@ -34,14 +34,13 @@ export default function ContasPagarPage() {
   const pagarMutation = usePagarConta()
   const cancelarMutation = useCancelarConta()
 
-  const handlePagar = async (id: string) => {
+  const handlePagar = (id: string) => {
     if (!confirm('Marcar esta conta como paga?')) return
-    try {
-      await pagarMutation.mutateAsync(id)
-      toast.success('Conta marcada como paga')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro')
-    }
+    toast.promise(pagarMutation.mutateAsync(id), {
+      loading: 'Processando pagamento...',
+      success: 'Conta marcada como paga',
+      error: (err) => err instanceof Error ? err.message : 'Erro',
+    })
   }
 
   const handleCancelar = async (id: string) => {

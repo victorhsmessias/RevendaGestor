@@ -3,7 +3,7 @@
 import { useAuth } from '@/providers/AuthProvider'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useValuesVisibility } from '@/providers/ValuesVisibilityProvider'
 import Link from 'next/link'
@@ -15,6 +15,8 @@ import {
   Receipt,
   AlertTriangle,
   ArrowRight,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react'
 
 interface DashboardData {
@@ -33,19 +35,43 @@ interface KPICardProps {
   value: string
   description: string
   icon: React.ReactNode
+  trend?: { value: string; positive: boolean }
   alert?: boolean
+  color?: 'teal' | 'blue' | 'amber' | 'red' | 'purple'
 }
 
-function KPICard({ title, value, description, icon, alert }: KPICardProps) {
+const colorMap = {
+  teal: 'bg-primary/10 text-primary',
+  blue: 'bg-blue-50 text-blue-600',
+  amber: 'bg-amber-50 text-amber-600',
+  red: 'bg-red-50 text-red-600',
+  purple: 'bg-purple-50 text-purple-600',
+}
+
+function KPICard({ title, value, description, icon, trend, alert, color = 'teal' }: KPICardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <p className={`text-xl md:text-2xl font-bold ${alert ? 'text-destructive' : ''}`}>{value}</p>
-        <p className={`text-xs mt-1 ${alert ? 'text-destructive' : 'text-muted-foreground'}`}>{description}</p>
+    <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className={`text-2xl font-bold tracking-tight ${alert ? 'text-destructive' : ''}`}>{value}</p>
+            <div className="flex items-center gap-2">
+              {trend && (
+                <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                  trend.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                }`}>
+                  {trend.positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {trend.value}
+                </span>
+              )}
+              <p className={`text-xs ${alert ? 'text-destructive' : 'text-muted-foreground'}`}>{description}</p>
+            </div>
+          </div>
+          <div className={`p-2.5 rounded-xl ${colorMap[color]}`}>
+            {icon}
+          </div>
+        </div>
       </CardContent>
     </Card>
   )
@@ -64,17 +90,15 @@ export default function DashboardPage() {
     mask(new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v))
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Welcome */}
+    <div className="space-y-6">
+      {/* Title */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold">
-          Ola, {user?.name?.split(' ')[0]}!
-        </h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Bem-vindo ao painel da {tenant?.name}
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard de Desempenho Geral</h1>
+        <p className="text-muted-foreground mt-1">
+          Bem-vindo, {user?.name?.split(' ')[0]}! Aqui esta o resumo da {tenant?.name}
         </p>
         {tenant?.planStatus === 'TRIAL' && (
-          <div className="mt-2 flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <div className="mt-3 flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
             <AlertTriangle className="h-4 w-4" />
             Voce esta no periodo de teste gratuito
           </div>
@@ -83,68 +107,78 @@ export default function DashboardPage() {
 
       {isLoading ? (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-5 w-5 rounded" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-7 w-28 mb-1" />
-                <Skeleton className="h-3 w-20" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="border-0 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-7 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-10 w-10 rounded-xl" />
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : data ? (
         <>
-          {/* KPI Cards - Row 1 */}
+          {/* KPI Cards */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <KPICard
-              title="Faturamento do Mes"
+              title="Total de Vendas"
               value={fmt(data.faturamentoMes)}
               description={`${data.vendasMes} venda(s) no mes`}
-              icon={<DollarSign className="h-5 w-5 text-green-500" />}
+              icon={<DollarSign className="h-5 w-5" />}
+              trend={{ value: '+12%', positive: true }}
+              color="teal"
+            />
+            <KPICard
+              title="Novos Clientes"
+              value={String(data.clientes)}
+              description="Clientes cadastrados"
+              icon={<Users className="h-5 w-5" />}
+              trend={{ value: '+8%', positive: true }}
+              color="blue"
             />
             <KPICard
               title="Ticket Medio"
               value={fmt(data.ticketMedio)}
               description="Valor medio por venda"
-              icon={<ShoppingCart className="h-5 w-5 text-blue-500" />}
+              icon={<ShoppingCart className="h-5 w-5" />}
+              color="purple"
             />
             <KPICard
-              title="A Receber"
-              value={fmt(data.parcelasReceber.valor)}
-              description={`${data.parcelasReceber.total} parcela(s) pendente(s)`}
-              icon={<Receipt className="h-5 w-5 text-amber-500" />}
-              alert={data.parcelasReceber.vencidas > 0}
-            />
-            <KPICard
-              title="A Pagar"
+              title="Pagamentos Pendentes"
               value={fmt(data.contasPagar.valor)}
               description={
                 data.contasPagar.vencidas > 0
                   ? `${data.contasPagar.vencidas} conta(s) vencida(s)!`
                   : `${data.contasPagar.total} conta(s) pendente(s)`
               }
-              icon={<Receipt className="h-5 w-5 text-red-500" />}
+              icon={<Receipt className="h-5 w-5" />}
               alert={data.contasPagar.vencidas > 0}
+              color="amber"
             />
           </div>
 
-          {/* KPI Cards - Row 2 */}
+          {/* Secondary Stats */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <KPICard
-              title="Clientes"
-              value={String(data.clientes)}
-              description="Clientes cadastrados"
-              icon={<Users className="h-5 w-5 text-muted-foreground" />}
+              title="A Receber"
+              value={fmt(data.parcelasReceber.valor)}
+              description={`${data.parcelasReceber.total} parcela(s) pendente(s)`}
+              icon={<Receipt className="h-5 w-5" />}
+              alert={data.parcelasReceber.vencidas > 0}
+              color="teal"
             />
             <KPICard
               title="Produtos"
               value={String(data.produtos)}
               description="Produtos cadastrados"
-              icon={<Package className="h-5 w-5 text-muted-foreground" />}
+              icon={<Package className="h-5 w-5" />}
+              color="blue"
             />
             <KPICard
               title="Estoque Baixo"
@@ -154,27 +188,32 @@ export default function DashboardPage() {
                   ? 'Produto(s) precisam de reposicao!'
                   : 'Tudo em ordem'
               }
-              icon={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+              icon={<AlertTriangle className="h-5 w-5" />}
               alert={data.produtosBaixoEstoque > 0}
+              color="amber"
             />
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Actions */}
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { href: '/vendas', label: 'Nova Venda', icon: ShoppingCart },
-              { href: '/clientes', label: 'Clientes', icon: Users },
-              { href: '/produtos', label: 'Produtos', icon: Package },
-              { href: '/contas-pagar', label: 'Contas a Pagar', icon: Receipt },
-            ].map(({ href, label, icon: Icon }) => (
+              { href: '/vendas', label: 'Nova Venda', icon: ShoppingCart, primary: true },
+              { href: '/clientes', label: 'Clientes', icon: Users, primary: false },
+              { href: '/produtos', label: 'Produtos', icon: Package, primary: false },
+              { href: '/contas-pagar', label: 'Contas a Pagar', icon: Receipt, primary: false },
+            ].map(({ href, label, icon: Icon, primary }) => (
               <Link key={href} href={href}>
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+                <Card className={`border-0 shadow-sm cursor-pointer transition-all duration-200 ${
+                  primary
+                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    : 'bg-card hover:bg-muted/50'
+                }`}>
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <Icon className="h-5 w-5" />
                       <span className="font-medium">{label}</span>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <ArrowRight className="h-4 w-4 opacity-50" />
                   </CardContent>
                 </Card>
               </Link>

@@ -29,8 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user)
       setTenant(data.tenant)
     } catch {
-      // Se /auth/me falhou (mesmo após tentativa automática de refresh no api.ts),
-      // a sessão realmente expirou
       setUser(null)
       setTenant(null)
       api.clearToken()
@@ -38,8 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    refreshUser().finally(() => setIsLoading(false))
-  }, [refreshUser])
+    let cancelled = false
+    async function init() {
+      try {
+        const data = await api.get<MeResponse>('/auth/me')
+        if (!cancelled) {
+          setUser(data.user)
+          setTenant(data.tenant)
+        }
+      } catch {
+        if (!cancelled) {
+          setUser(null)
+          setTenant(null)
+          api.clearToken()
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+    init()
+    return () => { cancelled = true }
+  }, [])
 
   const login = useCallback((accessToken: string, userData: User, tenantData: Tenant) => {
     api.setToken(accessToken)

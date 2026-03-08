@@ -29,6 +29,29 @@ interface AsaasPayment {
   dueDate: string
 }
 
+interface AsaasPixQrCode {
+  encodedImage: string
+  payload: string
+  expirationDate: string
+}
+
+export interface AsaasCreditCard {
+  holderName: string
+  number: string
+  expiryMonth: string
+  expiryYear: string
+  ccv: string
+}
+
+export interface AsaasCreditCardHolderInfo {
+  name: string
+  email: string
+  cpfCnpj: string
+  postalCode: string
+  addressNumber: string
+  phone: string
+}
+
 async function asaasRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -59,19 +82,35 @@ export const asaas = {
     })
   },
 
-  async createSubscription(customerId: string, billingType: 'PIX' | 'CREDIT_CARD' | 'UNDEFINED' = 'UNDEFINED'): Promise<AsaasSubscription> {
+  async updateCustomer(customerId: string, data: { cpfCnpj?: string }): Promise<AsaasCustomer> {
+    return asaasRequest<AsaasCustomer>('PUT', `/customers/${customerId}`, data)
+  },
+
+  async createSubscription(
+    customerId: string,
+    billingType: 'PIX' | 'CREDIT_CARD' | 'UNDEFINED',
+    creditCard?: AsaasCreditCard,
+    creditCardHolderInfo?: AsaasCreditCardHolderInfo,
+  ): Promise<AsaasSubscription> {
     const nextDueDate = new Date()
     nextDueDate.setDate(nextDueDate.getDate() + 1)
     const dueDateStr = nextDueDate.toISOString().split('T')[0]
 
-    return asaasRequest<AsaasSubscription>('POST', '/subscriptions', {
+    const payload: Record<string, unknown> = {
       customer: customerId,
       billingType,
       value: 34.90,
       nextDueDate: dueDateStr,
       cycle: 'MONTHLY',
       description: 'RevendaGestor - Assinatura Mensal',
-    })
+    }
+
+    if (billingType === 'CREDIT_CARD' && creditCard && creditCardHolderInfo) {
+      payload.creditCard = creditCard
+      payload.creditCardHolderInfo = creditCardHolderInfo
+    }
+
+    return asaasRequest<AsaasSubscription>('POST', '/subscriptions', payload)
   },
 
   async getSubscription(subscriptionId: string): Promise<AsaasSubscription> {
@@ -80,6 +119,10 @@ export const asaas = {
 
   async getSubscriptionPayments(subscriptionId: string): Promise<{ data: AsaasPayment[] }> {
     return asaasRequest<{ data: AsaasPayment[] }>('GET', `/subscriptions/${subscriptionId}/payments`)
+  },
+
+  async getPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
+    return asaasRequest<AsaasPixQrCode>('GET', `/payments/${paymentId}/pixQrCode`)
   },
 
   async cancelSubscription(subscriptionId: string): Promise<AsaasSubscription> {

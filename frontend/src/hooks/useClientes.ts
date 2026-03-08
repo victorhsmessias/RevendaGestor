@@ -38,8 +38,8 @@ export function useCreateCliente() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post<Cliente>('/clientes', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clientes'] })
     },
   })
 }
@@ -49,9 +49,11 @@ export function useUpdateCliente() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.patch<Cliente>(`/clientes/${id}`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] })
-      queryClient.invalidateQueries({ queryKey: ['clientes', variables.id] })
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['clientes'] }),
+        queryClient.invalidateQueries({ queryKey: ['clientes', variables.id] }),
+      ])
     },
   })
 }
@@ -60,8 +62,8 @@ export function useDeleteCliente() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete(`/clientes/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clientes'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['clientes'] })
     },
   })
 }

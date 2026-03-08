@@ -19,6 +19,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "RevendaGestor - Gestão de Vendas",
   description: "Sistema completo de gestão de vendas para revendedoras",
+  icons: {
+    icon: "/logo-r.png",
+    apple: "/logo-r.png",
+  },
 }
 
 export default function RootLayout({

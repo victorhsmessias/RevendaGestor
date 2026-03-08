@@ -120,8 +120,36 @@ export const updateTenantSchema = z.object({
 })
 export type UpdateTenant = z.infer<typeof updateTenantSchema>
 
+// === Recuperacao de senha ===
+export const forgotPasswordSchema = z.object({
+  email: emailValidator,
+})
+export type ForgotPassword = z.infer<typeof forgotPasswordSchema>
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token obrigatorio'),
+  password: z.string().min(6, 'Senha deve ter no minimo 6 caracteres'),
+})
+export type ResetPassword = z.infer<typeof resetPasswordSchema>
+
 // === Assinatura ===
 export const createAssinaturaSchema = z.object({
   billingType: z.enum(['PIX', 'CREDIT_CARD', 'UNDEFINED']).default('UNDEFINED'),
+  cpfCnpj: z.string().min(11, 'CPF/CNPJ obrigatorio').optional(),
+  creditCard: z.object({
+    holderName: z.string(),
+    number: z.string(),
+    expiryMonth: z.string(),
+    expiryYear: z.string(),
+    ccv: z.string(),
+  }).optional(),
+  creditCardHolderInfo: z.object({
+    name: z.string(),
+    email: z.string().email(),
+    cpfCnpj: z.string(),
+    postalCode: z.string(),
+    addressNumber: z.string(),
+    phone: z.string(),
+  }).optional(),
 })
 export type CreateAssinatura = z.infer<typeof createAssinaturaSchema>

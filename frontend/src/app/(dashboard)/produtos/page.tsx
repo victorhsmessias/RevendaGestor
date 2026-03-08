@@ -25,15 +25,13 @@ export default function ProdutosPage() {
   const { data, isLoading, error } = useProdutos(page, search)
   const deleteMutation = useDeleteProduto()
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = (id: string, name: string) => {
     if (!confirm(`Tem certeza que deseja remover o produto "${name}"?`)) return
-    try {
-      await deleteMutation.mutateAsync(id)
-      toast.success('Produto removido')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao remover'
-      toast.error(message)
-    }
+    toast.promise(deleteMutation.mutateAsync(id), {
+      loading: "Removendo produto...",
+      success: "Produto removido",
+      error: "Erro ao remover produto",
+    })
   }
 
   const handleFormSuccess = () => {

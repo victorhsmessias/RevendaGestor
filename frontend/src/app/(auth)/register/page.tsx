@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { ShoppingCart } from 'lucide-react'
+import Image from 'next/image'
 import type { AuthResponse } from '@/types'
 
 export default function RegisterPage() {
@@ -44,8 +44,8 @@ export default function RegisterPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <div className="flex justify-center mb-2">
-          <ShoppingCart className="h-10 w-10 text-primary" />
+        <div className="flex justify-center mb-4">
+          <Image src="/logo.png" alt="RevendaGestor" width={220} height={50} className="object-contain" priority />
         </div>
         <CardTitle className="text-2xl">Criar Conta</CardTitle>
         <CardDescription>Comece seu trial gratuito de 14 dias</CardDescription>
@@ -108,7 +108,7 @@ export default function RegisterPage() {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
             {isLoading ? 'Criando conta...' : 'Criar conta grátis'}
           </Button>
           <p className="text-sm text-muted-foreground text-center">

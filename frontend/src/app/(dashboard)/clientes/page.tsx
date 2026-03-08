@@ -24,14 +24,13 @@ export default function ClientesPage() {
   const { data, isLoading, error } = useClientes(page, search)
   const deleteMutation = useDeleteCliente()
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = (id: string, name: string) => {
     if (!confirm(`Tem certeza que deseja remover o cliente "${name}"?`)) return
-    try {
-      await deleteMutation.mutateAsync(id)
-      toast.success('Cliente removido')
-    } catch {
-      toast.error('Erro ao remover cliente')
-    }
+    toast.promise(deleteMutation.mutateAsync(id), {
+      loading: "Removendo cliente...",
+      success: "Cliente removido",
+      error: "Erro ao remover cliente",
+    })
   }
 
   const handleFormSuccess = () => {

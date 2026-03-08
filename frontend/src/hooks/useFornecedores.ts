@@ -44,8 +44,8 @@ export function useCreateFornecedor() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post<Fornecedor>('/fornecedores', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fornecedores'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['fornecedores'] })
     },
   })
 }
@@ -55,9 +55,11 @@ export function useUpdateFornecedor() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.patch<Fornecedor>(`/fornecedores/${id}`, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['fornecedores'] })
-      queryClient.invalidateQueries({ queryKey: ['fornecedores', variables.id] })
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fornecedores'] }),
+        queryClient.invalidateQueries({ queryKey: ['fornecedores', variables.id] }),
+      ])
     },
   })
 }
@@ -66,8 +68,8 @@ export function useDeleteFornecedor() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete(`/fornecedores/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fornecedores'] })
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['fornecedores'] })
     },
   })
 }

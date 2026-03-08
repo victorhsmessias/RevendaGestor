@@ -29,9 +29,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-muted/30">
       <Sidebar />
-      <div className="md:pl-64">
+      <div className="lg:pl-64">
         <Header />
-        <main className="p-3 md:p-6">
+        <main className="p-3 lg:p-6">
           {children}
         </main>
       </div>

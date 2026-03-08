@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 
 interface ValuesVisibilityContextType {
   visible: boolean
@@ -11,12 +11,10 @@ interface ValuesVisibilityContextType {
 const ValuesVisibilityContext = createContext<ValuesVisibilityContextType | null>(null)
 
 export function ValuesVisibilityProvider({ children }: { children: React.ReactNode }) {
-  const [visible, setVisible] = useState(true)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('revendagestor-values-visible')
-    if (saved === 'false') setVisible(false)
-  }, [])
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('revendagestor-values-visible') !== 'false'
+  })
 
   const toggle = useCallback(() => {
     setVisible(prev => {

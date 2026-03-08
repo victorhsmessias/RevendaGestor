@@ -6,7 +6,6 @@ import {
   useVenda,
   useCancelarVenda,
   usePagarParcela,
-  type Venda,
   type ClienteVendas,
   type ClienteVendaItem,
 } from '@/hooks/useVendas'
@@ -22,7 +21,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { useValuesVisibility } from '@/providers/ValuesVisibilityProvider'
-import { Plus, Search, Eye, XCircle, CheckCircle, ChevronDown, ChevronRight, ArrowLeft, Phone, User } from 'lucide-react'
+import { Plus, Search, Eye, XCircle, CheckCircle, ChevronDown, ChevronRight } from 'lucide-react'
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
@@ -50,15 +49,13 @@ export default function VendasPage() {
   const cancelMutation = useCancelarVenda()
   const pagarParcelaMutation = usePagarParcela()
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = (id: string) => {
     if (!confirm('Tem certeza que deseja cancelar esta venda? O estoque sera devolvido.')) return
-    try {
-      await cancelMutation.mutateAsync(id)
-      toast.success('Venda cancelada')
-      setDetailId(null)
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erro ao cancelar')
-    }
+    toast.promise(cancelMutation.mutateAsync(id), {
+      loading: 'Cancelando venda...',
+      success: () => { setDetailId(null); return 'Venda cancelada' },
+      error: (err) => err instanceof Error ? err.message : 'Erro ao cancelar',
+    })
   }
 
   const handlePagarParcela = async (vendaId: string, parcelaId: string) => {

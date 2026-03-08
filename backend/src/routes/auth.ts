@@ -2,8 +2,9 @@ import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcrypt'
 import crypto from 'crypto'
 import { prisma } from '../lib/prisma'
-import { registerSchema, loginSchema } from '../lib/validators'
-import { UnauthorizedError, ConflictError } from '../lib/errors'
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../lib/validators'
+import { UnauthorizedError, ConflictError, ValidationError } from '../lib/errors'
+import { sendPasswordResetEmail } from '../lib/email'
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 7
 const ACCESS_TOKEN_EXPIRY = '15m'
@@ -95,6 +96,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         id: result.tenant.id,
         name: result.tenant.name,
         planStatus: result.tenant.planStatus,
+        trialEndsAt: result.tenant.trialEndsAt,
       },
     })
   })
@@ -155,6 +157,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         id: user.tenant.id,
         name: user.tenant.name,
         planStatus: user.tenant.planStatus,
+        trialEndsAt: user.tenant.trialEndsAt,
       },
     }
   })
@@ -248,5 +251,61 @@ export async function authRoutes(fastify: FastifyInstance) {
         trialEndsAt: user.tenant.trialEndsAt,
       },
     }
+  })
+
+  // POST /api/auth/forgot-password
+  fastify.post('/auth/forgot-password', async (request) => {
+    const { email } = forgotPasswordSchema.parse(request.body)
+
+    const user = await prisma.user.findUnique({ where: { email } })
+
+    // Sempre retorna sucesso (nao revelar se email existe)
+    if (!user) return { message: 'Se o email existir, enviaremos um link de recuperacao.' }
+
+    // Limpar tokens antigos
+    await prisma.passwordReset.deleteMany({ where: { userId: user.id } })
+
+    // Gerar token
+    const token = crypto.randomBytes(32).toString('hex')
+    await prisma.passwordReset.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hora
+      },
+    })
+
+    // Enviar email com link de recuperacao
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`
+    await sendPasswordResetEmail(email, user.name, resetUrl)
+
+    return { message: 'Se o email existir, enviaremos um link de recuperacao.' }
+  })
+
+  // POST /api/auth/reset-password
+  fastify.post('/auth/reset-password', async (request) => {
+    const { token, password } = resetPasswordSchema.parse(request.body)
+
+    const resetToken = await prisma.passwordReset.findUnique({
+      where: { token },
+      include: { user: true },
+    })
+
+    if (!resetToken || resetToken.expiresAt < new Date()) {
+      if (resetToken) await prisma.passwordReset.delete({ where: { id: resetToken.id } })
+      throw new ValidationError('Link expirado ou invalido. Solicite um novo.')
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { password: hashedPassword },
+      }),
+      prisma.passwordReset.delete({ where: { id: resetToken.id } }),
+    ])
+
+    return { message: 'Senha alterada com sucesso.' }
   })
 }

@@ -40,7 +40,7 @@ export function useCreateProduto() {
   return useMutation({
     mutationFn: (data: Omit<Produto, 'id' | 'fornecedor' | 'createdAt'>) =>
       api.post<Produto>('/produtos', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['produtos'] }) },
   })
 }
 
@@ -49,7 +49,7 @@ export function useUpdateProduto() {
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string } & Partial<Omit<Produto, 'id' | 'fornecedor' | 'createdAt'>>) =>
       api.patch<Produto>(`/produtos/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['produtos'] }) },
   })
 }
 
@@ -57,6 +57,6 @@ export function useDeleteProduto() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete(`/produtos/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['produtos'] }),
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ['produtos'] }) },
   })
 }

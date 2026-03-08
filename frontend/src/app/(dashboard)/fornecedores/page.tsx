@@ -24,15 +24,13 @@ export default function FornecedoresPage() {
   const { data, isLoading, error } = useFornecedores(page, search)
   const deleteMutation = useDeleteFornecedor()
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = (id: string, name: string) => {
     if (!confirm(`Tem certeza que deseja remover o fornecedor "${name}"?`)) return
-    try {
-      await deleteMutation.mutateAsync(id)
-      toast.success('Fornecedor removido')
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao remover'
-      toast.error(message)
-    }
+    toast.promise(deleteMutation.mutateAsync(id), {
+      loading: "Removendo fornecedor...",
+      success: "Fornecedor removido",
+      error: "Erro ao remover fornecedor",
+    })
   }
 
   const handleFormSuccess = () => {

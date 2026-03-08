@@ -11,8 +11,11 @@ import {
   Receipt,
   BarChart3,
   Settings,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import { useAuth } from '@/providers/AuthProvider'
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -20,26 +23,33 @@ const menuItems = [
   { href: '/fornecedores', label: 'Fornecedores', icon: Truck },
   { href: '/produtos', label: 'Produtos', icon: Package },
   { href: '/vendas', label: 'Vendas', icon: ShoppingCart },
-  { href: '/contas-pagar', label: 'Contas a Pagar', icon: Receipt },
-  { href: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+  { href: '/contas-pagar', label: 'Pagamentos', icon: Receipt },
+  { href: '/relatorios', label: 'Relatorios', icon: BarChart3 },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { logout } = useAuth()
 
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-background border-r">
+    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-sidebar">
       {/* Logo */}
-      <div className="flex items-center h-16 px-6 border-b">
-        <Link href="/" className="flex items-center gap-2">
-          <ShoppingCart className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">RevendaGestor</span>
+      <div className="flex items-center justify-center h-16 px-5">
+        <Link href="/">
+          <Image
+            src="/logo.png"
+            alt="RevendaGestor"
+            width={180}
+            height={40}
+            className="object-contain"
+            priority
+          />
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon
@@ -48,10 +58,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/25'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
               <Icon className="h-5 w-5" />
@@ -60,6 +70,17 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Logout */}
+      <div className="px-3 py-4 border-t border-sidebar-border">
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
+        >
+          <LogOut className="h-5 w-5" />
+          Sair
+        </button>
+      </div>
     </aside>
   )
 }

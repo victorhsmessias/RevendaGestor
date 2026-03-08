@@ -106,10 +106,12 @@ export function useCreateVenda() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: CreateVendaInput) => api.post<Venda>('/vendas', data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendas'] })
-      qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] })
-      qc.invalidateQueries({ queryKey: ['produtos'] })
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['vendas'] }),
+        qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] }),
+        qc.invalidateQueries({ queryKey: ['produtos'] }),
+      ])
     },
   })
 }
@@ -119,9 +121,11 @@ export function usePagarParcela() {
   return useMutation({
     mutationFn: ({ vendaId, parcelaId }: { vendaId: string; parcelaId: string }) =>
       api.patch(`/vendas/${vendaId}/parcelas/${parcelaId}/pagar`, {}),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendas'] })
-      qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] })
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['vendas'] }),
+        qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] }),
+      ])
     },
   })
 }
@@ -130,10 +134,12 @@ export function useCancelarVenda() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api.delete(`/vendas/${id}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['vendas'] })
-      qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] })
-      qc.invalidateQueries({ queryKey: ['produtos'] })
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['vendas'] }),
+        qc.invalidateQueries({ queryKey: ['vendas-por-cliente'] }),
+        qc.invalidateQueries({ queryKey: ['produtos'] }),
+      ])
     },
   })
 }
