@@ -32,7 +32,7 @@ export default function LoginPage() {
       const result = await api.post<AuthResponse>('/auth/login', data)
       login(result.accessToken, result.user, result.tenant)
       toast.success('Login realizado com sucesso!')
-      router.push('/')
+      router.push('/dashboard')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao fazer login'
       toast.error(message)

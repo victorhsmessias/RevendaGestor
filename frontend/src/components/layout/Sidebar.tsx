@@ -21,7 +21,7 @@ import { useAuth } from '@/providers/AuthProvider'
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
 
 const menuItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/fornecedores', label: 'Fornecedores', icon: Truck },
   { href: '/produtos', label: 'Produtos', icon: Package },
@@ -40,7 +40,7 @@ export function Sidebar() {
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-sidebar">
       {/* Logo */}
       <div className="flex items-center justify-center h-16 px-5">
-        <Link href="/">
+        <Link href="/dashboard">
           <Image
             src="/logo.png"
             alt="RevendaGestor"

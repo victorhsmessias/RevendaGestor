@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.push('/login')
     }
     if (!isLoading && isAuthenticated && !isAdmin) {
-      router.push('/')
+      router.push('/dashboard')
     }
   }, [isAuthenticated, isLoading, isAdmin, router])
 
@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
           <Link
-            href="/"
+            href="/dashboard"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"
           >
             <ArrowLeft className="h-5 w-5" />
