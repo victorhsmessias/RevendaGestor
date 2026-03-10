@@ -23,10 +23,19 @@ function getRefreshCookieOptions() {
   }
 }
 
+const strictRateLimit = {
+  config: {
+    rateLimit: {
+      max: 10,
+      timeWindow: '1 minute',
+    },
+  },
+}
+
 export async function authRoutes(fastify: FastifyInstance) {
 
   // POST /api/auth/register
-  fastify.post('/auth/register', async (request, reply) => {
+  fastify.post('/auth/register', { ...strictRateLimit }, async (request, reply) => {
     const data = registerSchema.parse(request.body)
 
     // Verificar se email já existe
@@ -102,7 +111,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/auth/login
-  fastify.post('/auth/login', async (request, reply) => {
+  fastify.post('/auth/login', { ...strictRateLimit }, async (request, reply) => {
     const data = loginSchema.parse(request.body)
 
     const user = await prisma.user.findUnique({
@@ -254,7 +263,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/auth/forgot-password
-  fastify.post('/auth/forgot-password', async (request) => {
+  fastify.post('/auth/forgot-password', { ...strictRateLimit }, async (request) => {
     const { email } = forgotPasswordSchema.parse(request.body)
 
     const user = await prisma.user.findUnique({ where: { email } })

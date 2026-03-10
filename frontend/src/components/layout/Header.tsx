@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import {
-  LogOut, Menu, User, Eye, EyeOff, AlertTriangle, ChevronLeft,
+  LogOut, Menu, User, Eye, EyeOff, AlertTriangle, ChevronLeft, Shield,
   LayoutDashboard, Users, Package, ShoppingCart, Truck, Receipt, BarChart3, Settings,
 } from 'lucide-react'
 import { useValuesVisibility } from '@/providers/ValuesVisibilityProvider'
@@ -34,8 +34,11 @@ const menuItems = [
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
 ]
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
+
 export function Header() {
   const { user, tenant, logout } = useAuth()
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email)
   const { visible, toggle } = useValuesVisibility()
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -129,7 +132,17 @@ export function Header() {
               )
             })}
           </nav>
-          <div className="px-3 py-4 mt-auto border-t border-sidebar-border">
+          <div className="px-3 py-4 mt-auto border-t border-sidebar-border space-y-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-amber-500 hover:bg-sidebar-accent hover:text-amber-400 transition-all duration-200"
+              >
+                <Shield className="h-5 w-5" />
+                Painel Admin
+              </Link>
+            )}
             <button
               onClick={() => { setMobileMenuOpen(false); logout() }}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"

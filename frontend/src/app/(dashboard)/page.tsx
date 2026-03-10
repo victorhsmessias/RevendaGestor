@@ -15,8 +15,6 @@ import {
   Receipt,
   AlertTriangle,
   ArrowRight,
-  TrendingUp,
-  TrendingDown,
 } from 'lucide-react'
 
 interface DashboardData {
@@ -35,7 +33,6 @@ interface KPICardProps {
   value: string
   description: string
   icon: React.ReactNode
-  trend?: { value: string; positive: boolean }
   alert?: boolean
   color?: 'teal' | 'blue' | 'amber' | 'red' | 'purple'
 }
@@ -48,7 +45,7 @@ const colorMap = {
   purple: 'bg-purple-50 text-purple-600',
 }
 
-function KPICard({ title, value, description, icon, trend, alert, color = 'teal' }: KPICardProps) {
+function KPICard({ title, value, description, icon, alert, color = 'teal' }: KPICardProps) {
   return (
     <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-5">
@@ -56,17 +53,7 @@ function KPICard({ title, value, description, icon, trend, alert, color = 'teal'
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <p className={`text-2xl font-bold tracking-tight ${alert ? 'text-destructive' : ''}`}>{value}</p>
-            <div className="flex items-center gap-2">
-              {trend && (
-                <span className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                  trend.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                }`}>
-                  {trend.positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  {trend.value}
-                </span>
-              )}
-              <p className={`text-xs ${alert ? 'text-destructive' : 'text-muted-foreground'}`}>{description}</p>
-            </div>
+            <p className={`text-xs ${alert ? 'text-destructive' : 'text-muted-foreground'}`}>{description}</p>
           </div>
           <div className={`p-2.5 rounded-xl ${colorMap[color]}`}>
             {icon}
@@ -131,7 +118,6 @@ export default function DashboardPage() {
               value={fmt(data.faturamentoMes)}
               description={`${data.vendasMes} venda(s) no mes`}
               icon={<DollarSign className="h-5 w-5" />}
-              trend={{ value: '+12%', positive: true }}
               color="teal"
             />
             <KPICard
@@ -139,7 +125,6 @@ export default function DashboardPage() {
               value={String(data.clientes)}
               description="Clientes cadastrados"
               icon={<Users className="h-5 w-5" />}
-              trend={{ value: '+8%', positive: true }}
               color="blue"
             />
             <KPICard

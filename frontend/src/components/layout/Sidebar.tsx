@@ -12,10 +12,13 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useAuth } from '@/providers/AuthProvider'
+
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean)
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -30,7 +33,8 @@ const menuItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email)
 
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-sidebar">
@@ -71,8 +75,17 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-sidebar-border">
+      {/* Admin + Logout */}
+      <div className="px-3 py-4 border-t border-sidebar-border space-y-1">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-amber-500 hover:bg-sidebar-accent hover:text-amber-400 transition-all duration-200"
+          >
+            <Shield className="h-5 w-5" />
+            Painel Admin
+          </Link>
+        )}
         <button
           onClick={logout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200"

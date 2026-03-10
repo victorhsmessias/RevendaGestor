@@ -107,7 +107,7 @@ export default function RegisterPage() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-4">
+        <CardFooter className="mt-4 flex flex-col gap-4">
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
             {isLoading ? 'Criando conta...' : 'Criar conta grátis'}
           </Button>
