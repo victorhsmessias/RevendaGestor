@@ -3,6 +3,7 @@ export interface User {
   name: string
   email: string
   role: 'OWNER' | 'ADMIN' | 'USER'
+  emailVerified?: boolean
 }
 
 export interface Tenant {

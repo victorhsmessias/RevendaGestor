@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { prisma } from '../lib/prisma'
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../lib/validators'
 import { UnauthorizedError, ConflictError, ValidationError } from '../lib/errors'
-import { sendPasswordResetEmail } from '../lib/email'
+import { sendPasswordResetEmail, sendEmailVerification } from '../lib/email'
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 7
 const ACCESS_TOKEN_EXPIRY = '15m'
@@ -45,9 +45,10 @@ export async function authRoutes(fastify: FastifyInstance) {
     if (existingUser) throw new ConflictError('Email já cadastrado')
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
+    const emailVerifyToken = crypto.randomBytes(32).toString('hex')
 
     // Criar tenant + user em transação
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
           name: data.tenantName,
@@ -56,57 +57,32 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       })
 
-      const user = await tx.user.create({
+      await tx.user.create({
         data: {
           tenantId: tenant.id,
           name: data.name,
           email: data.email,
           password: hashedPassword,
           role: 'OWNER',
+          emailVerified: false,
+          emailVerifyToken,
+          emailVerifyExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
         },
       })
-
-      // Criar refresh token
-      const refreshTokenValue = generateRefreshToken()
-      await tx.refreshToken.create({
-        data: {
-          userId: user.id,
-          token: refreshTokenValue,
-          expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000),
-        },
-      })
-
-      return { user, tenant, refreshToken: refreshTokenValue }
     })
 
-    // Gerar access token
-    const accessToken = fastify.jwt.sign(
-      {
-        id: result.user.id,
-        email: result.user.email,
-        tenantId: result.tenant.id,
-        role: result.user.role,
-      },
-      { expiresIn: ACCESS_TOKEN_EXPIRY }
-    )
-
-    // Set refresh token cookie
-    reply.setCookie('refreshToken', result.refreshToken, getRefreshCookieOptions())
+    // Enviar email de verificação
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+    const verifyUrl = `${frontendUrl.split(',')[0]}/verify-email?token=${emailVerifyToken}`
+    try {
+      await sendEmailVerification(data.email, data.name, verifyUrl)
+    } catch (err) {
+      fastify.log.error(err, 'Erro ao enviar email de verificação')
+    }
 
     return reply.code(201).send({
-      accessToken,
-      user: {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: result.user.role,
-      },
-      tenant: {
-        id: result.tenant.id,
-        name: result.tenant.name,
-        planStatus: result.tenant.planStatus,
-        trialEndsAt: result.tenant.trialEndsAt,
-      },
+      message: 'Conta criada! Verifique seu email para ativar sua conta.',
+      needsVerification: true,
     })
   })
 
@@ -123,6 +99,10 @@ export async function authRoutes(fastify: FastifyInstance) {
 
     const validPassword = await bcrypt.compare(data.password, user.password)
     if (!validPassword) throw new UnauthorizedError('Email ou senha inválidos')
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedError('Email não verificado. Verifique sua caixa de entrada.')
+    }
 
     // Limpar refresh tokens antigos do user
     await prisma.refreshToken.deleteMany({
@@ -252,6 +232,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         name: user.name,
         email: user.email,
         role: user.role,
+        emailVerified: user.emailVerified,
       },
       tenant: {
         id: user.tenant.id,
@@ -260,6 +241,69 @@ export async function authRoutes(fastify: FastifyInstance) {
         trialEndsAt: user.tenant.trialEndsAt,
       },
     }
+  })
+
+  // GET /api/auth/verify-email?token=xxx
+  fastify.get('/auth/verify-email', async (request) => {
+    const { token } = request.query as { token: string }
+    if (!token) throw new ValidationError('Token de verificação não fornecido')
+
+    const user = await prisma.user.findUnique({
+      where: { emailVerifyToken: token },
+    })
+
+    if (!user) throw new ValidationError('Link de verificação inválido')
+
+    if (user.emailVerified) {
+      return { message: 'Email já foi verificado. Você pode fazer login.' }
+    }
+
+    if (user.emailVerifyExpires && user.emailVerifyExpires < new Date()) {
+      throw new ValidationError('Link de verificação expirado. Solicite um novo.')
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerifyToken: null,
+        emailVerifyExpires: null,
+      },
+    })
+
+    return { message: 'Email verificado com sucesso! Você já pode fazer login.' }
+  })
+
+  // POST /api/auth/resend-verification
+  fastify.post('/auth/resend-verification', { ...strictRateLimit }, async (request) => {
+    const { email } = request.body as { email: string }
+    if (!email) throw new ValidationError('Email é obrigatório')
+
+    const user = await prisma.user.findUnique({ where: { email } })
+
+    // Sempre retorna sucesso (não revelar se email existe)
+    if (!user || user.emailVerified) {
+      return { message: 'Se o email existir e não estiver verificado, enviaremos um novo link.' }
+    }
+
+    const emailVerifyToken = crypto.randomBytes(32).toString('hex')
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerifyToken,
+        emailVerifyExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    })
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+    const verifyUrl = `${frontendUrl.split(',')[0]}/verify-email?token=${emailVerifyToken}`
+    try {
+      await sendEmailVerification(email, user.name, verifyUrl)
+    } catch (err) {
+      fastify.log.error(err, 'Erro ao reenviar email de verificação')
+    }
+
+    return { message: 'Se o email existir e não estiver verificado, enviaremos um novo link.' }
   })
 
   // POST /api/auth/forgot-password

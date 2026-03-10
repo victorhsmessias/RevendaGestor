@@ -3,7 +3,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { registerSchema, type RegisterInput } from '@/lib/validators'
-import { useAuth } from '@/providers/AuthProvider'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,15 +10,14 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Image from 'next/image'
-import type { AuthResponse } from '@/types'
+import { Mail } from 'lucide-react'
 
 export default function RegisterPage() {
-  const { login } = useAuth()
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [registered, setRegistered] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState('')
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -29,16 +27,60 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterInput) => {
     setIsLoading(true)
     try {
-      const result = await api.post<AuthResponse>('/auth/register', data)
-      login(result.accessToken, result.user, result.tenant)
-      toast.success('Conta criada com sucesso! Bem-vindo ao RevendaGestor!')
-      router.push('/dashboard')
+      await api.post('/auth/register', data)
+      setRegisteredEmail(data.email)
+      setRegistered(true)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao criar conta'
       toast.error(message)
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleResend = async () => {
+    try {
+      await api.post('/auth/resend-verification', { email: registeredEmail })
+      toast.success('Email de verificacao reenviado!')
+    } catch {
+      toast.error('Erro ao reenviar email. Tente novamente.')
+    }
+  }
+
+  if (registered) {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+              <Mail className="h-8 w-8 text-emerald-600" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl">Verifique seu email</CardTitle>
+          <CardDescription className="mt-2">
+            Enviamos um link de verificacao para <strong>{registeredEmail}</strong>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Clique no link enviado para ativar sua conta. O link expira em 24 horas.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+            Nao recebeu? Verifique sua pasta de spam.
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col gap-4">
+          <Button variant="outline" className="w-full" onClick={handleResend}>
+            Reenviar email de verificacao
+          </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            <Link href="/login" className="text-primary hover:underline">
+              Voltar para o login
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
+    )
   }
 
   return (
@@ -69,7 +111,7 @@ export default function RegisterPage() {
             <Label htmlFor="tenantName">Nome da sua loja</Label>
             <Input
               id="tenantName"
-              placeholder="Cosméticos da Maria"
+              placeholder="Cosmeticos da Maria"
               {...form.register('tenantName')}
               disabled={isLoading}
             />
@@ -97,7 +139,7 @@ export default function RegisterPage() {
             <Input
               id="password"
               type="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Minimo 6 caracteres"
               {...form.register('password')}
               disabled={isLoading}
             />
@@ -109,12 +151,12 @@ export default function RegisterPage() {
 
         <CardFooter className="mt-4 flex flex-col gap-4">
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
-            {isLoading ? 'Criando conta...' : 'Criar conta grátis'}
+            {isLoading ? 'Criando conta...' : 'Criar conta gratis'}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
-            Já tem conta?{' '}
+            Ja tem conta?{' '}
             <Link href="/login" className="text-primary hover:underline">
-              Faça login
+              Faca login
             </Link>
           </p>
         </CardFooter>

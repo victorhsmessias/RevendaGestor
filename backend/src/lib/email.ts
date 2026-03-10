@@ -3,6 +3,30 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.RESEND_FROM || 'onboarding@resend.dev'
 
+export async function sendEmailVerification(to: string, name: string, verifyUrl: string) {
+  await resend.emails.send({
+    from: `RevendaGestor <${FROM}>`,
+    to,
+    subject: 'Confirme seu email - RevendaGestor',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #333; margin-bottom: 16px;">Confirme seu email</h2>
+        <p style="color: #555; font-size: 15px;">Ola, <strong>${name}</strong>!</p>
+        <p style="color: #555; font-size: 15px;">Obrigado por se cadastrar no RevendaGestor! Para ativar sua conta, clique no botao abaixo:</p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${verifyUrl}" style="background-color: #10b981; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+            Confirmar meu email
+          </a>
+        </div>
+        <p style="color: #888; font-size: 13px;">Este link expira em <strong>24 horas</strong>.</p>
+        <p style="color: #888; font-size: 13px;">Se voce nao criou esta conta, ignore este email.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+        <p style="color: #aaa; font-size: 12px; text-align: center;">RevendaGestor - Gestao inteligente para revendedoras</p>
+      </div>
+    `,
+  })
+}
+
 export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string) {
   await resend.emails.send({
     from: `RevendaGestor <${FROM}>`,
